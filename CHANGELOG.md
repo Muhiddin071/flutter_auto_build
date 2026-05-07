@@ -1,3 +1,8 @@
+## 1.0.3
+
+* Added an animated spinner to the progress bar to show the process is still alive
+* Closed `stdin` on the child process to prevent it from hanging indefinitely if it prompts for user input (like Xcode license checks)
+
 ## 1.0.2
 
 * Fixed a bug where process hangs on macOS by switching to `utf8.decoder`

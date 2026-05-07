@@ -45,6 +45,9 @@ class Builder {
       exit(1);
     }
 
+    // Close stdin so the process never hangs waiting for user input
+    await process.stdin.close();
+
     // Collect output silently
     final outBuf = StringBuffer();
     final errBuf = StringBuffer();
@@ -62,6 +65,8 @@ class Builder {
       if (lines.isNotEmpty) lastLine = lines.last;
     }, onError: (_) {});
 
+    final spinner = ['|', '/', '-', '\\'];
+
     // Animate progress while process runs
     final timer = Timer.periodic(const Duration(milliseconds: 150), (_) {
       var label = cur >= pctMid ? step.midLabel : step.label;
@@ -69,13 +74,15 @@ class Builder {
         // Show actual output if it's taking more than 4.5 seconds
         label = lastLine.length > 30 ? lastLine.substring(0, 30) + '...' : lastLine;
       }
+      
+      final spin = spinner[ticks % spinner.length];
 
       if (cur >= pctMid) {
         if (ticks % 5 == 0 && cur < step.pctEnd - 1) cur++;
       } else {
         if (ticks % 2 == 0 && cur < pctMid) cur++;
       }
-      Terminal.drawBar(cur, label);
+      Terminal.drawBar(cur, '$label $spin');
       ticks++;
     });
 
