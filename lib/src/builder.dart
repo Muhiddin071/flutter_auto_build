@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'terminal.dart';
 
@@ -28,23 +29,47 @@ class Builder {
     var cur = step.pctStart;
     var ticks = 0;
 
-    final parts   = step.command.split(' ');
-    final process = await Process.start(
-      parts.first,
-      parts.skip(1).toList(),
-      workingDirectory: projectDir,
-      runInShell: true,
-    );
+    final parts = step.command.split(' ');
+    Process process;
+    try {
+      process = await Process.start(
+        parts.first,
+        parts.skip(1).toList(),
+        workingDirectory: projectDir,
+        runInShell: true,
+      );
+    } catch (e) {
+      Terminal.writeln();
+      Terminal.writeln('  ${Terminal.red}${Terminal.bold}[ERROR] Failed to start command: ${step.command}${Terminal.reset}');
+      Terminal.writeln('  ${Terminal.dim}$e${Terminal.reset}');
+      exit(1);
+    }
 
     // Collect output silently
     final outBuf = StringBuffer();
     final errBuf = StringBuffer();
-    process.stdout.transform(SystemEncoding().decoder).listen((d) => outBuf.write(d));
-    process.stderr.transform(SystemEncoding().decoder).listen((d) => errBuf.write(d));
+    var lastLine = '';
+    
+    process.stdout.transform(utf8.decoder).listen((d) {
+      outBuf.write(d);
+      final lines = d.split('\n').map((l) => l.trim()).where((l) => l.isNotEmpty).toList();
+      if (lines.isNotEmpty) lastLine = lines.last;
+    }, onError: (_) {});
+    
+    process.stderr.transform(utf8.decoder).listen((d) {
+      errBuf.write(d);
+      final lines = d.split('\n').map((l) => l.trim()).where((l) => l.isNotEmpty).toList();
+      if (lines.isNotEmpty) lastLine = lines.last;
+    }, onError: (_) {});
 
     // Animate progress while process runs
     final timer = Timer.periodic(const Duration(milliseconds: 150), (_) {
-      final label = cur >= pctMid ? step.midLabel : step.label;
+      var label = cur >= pctMid ? step.midLabel : step.label;
+      if (ticks > 30 && lastLine.isNotEmpty) {
+        // Show actual output if it's taking more than 4.5 seconds
+        label = lastLine.length > 30 ? lastLine.substring(0, 30) + '...' : lastLine;
+      }
+
       if (cur >= pctMid) {
         if (ticks % 5 == 0 && cur < step.pctEnd - 1) cur++;
       } else {

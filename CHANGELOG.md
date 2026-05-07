@@ -1,3 +1,9 @@
+## 1.0.2
+
+* Fixed a bug where process hangs on macOS by switching to `utf8.decoder`
+* Builder now shows the actual process output if a step takes too long
+* Better error handling for process launch failures
+
 ## 1.0.1
 
 * Translated all texts and comments to English
